@@ -1,0 +1,22 @@
+{
+  "name": "EDI/Email Analyzer",
+  "description": "Adds a button to Gmail to analyze email content.",
+  "version": "1.0",
+  "manifest_version": 3,
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": ["content_script.js"],
+      "css": ["modal.css"]
+    }
+  ],
+  "host_permissions": [
+    "http://localhost:3001/*"
+  ],
+  "permissions": [
+    "storage"
+  ]
+}
