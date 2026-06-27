@@ -1,3 +1,5 @@
+//to load the chrome extensions 
+//our information like (name , work , file scripts)
 {
   "name": "EDI/Email Analyzer",
   "description": "Adds a button to Gmail to analyze email content.",

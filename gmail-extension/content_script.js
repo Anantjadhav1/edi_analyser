@@ -1,5 +1,34 @@
-// content_script.js (Updated)
+//the analyze button on gmail screen 
+//after runs the analyze button sends the text to the background.js
 
+function formatAIDate(timestamp) {
+  // Agar AI ne N/A bheja ya kuch nahi bheja
+  if (!timestamp || timestamp === "N/A") {
+    return "N/A";
+  }
+  
+  // Date banane ka try kar
+  const date = new Date(timestamp);
+
+  // Check kar ki date sahi bani ya "Invalid Date" hai
+  if (isNaN(date.getTime())) {
+    return timestamp; // Jaisa hai waisa dikha de
+  }
+  
+  // --- YEH HAI NAYA FIX ---
+  // Check kar ki date nikal gayi hai kya
+  const now = new Date();
+  if (date < now) {
+    // Agar date past ki hai, toh "Expired" dikha
+    return `${date.toLocaleString()} <span style="color: #f56565; font-weight: bold;"> (Expired)</span>`;
+  }
+  // -------------------------
+  
+  // Agar nahi, toh normal dikha
+  return date.toLocaleString();
+}
+
+// Function jo popup ko dikhayega
 function showModal(initialContent) {
   let modal = document.getElementById("edi-modal");
   if (modal) {
@@ -26,21 +55,27 @@ function showModal(initialContent) {
   };
 }
 
+// Function jo modal ko AI ke result se update karega
 function updateModalContent(data) {
   if (!data) {
     document.getElementById("edi-modal-body").innerHTML = "<p>Error: No data received.</p>";
     return;
   }
+  
+  // AI se mile result ko sundar HTML me banata hai
   const formattedHTML = `
     <p><strong>Summary:</strong> ${data.summary || 'N/A'}</p>
     <p><strong>Type:</strong> <span style="font-family: monospace; background: #4a5568; padding: 2px 6px; border-radius: 4px;">${data.messageType || 'UNKNOWN'}</span></p>
     <p><strong>Important:</strong> <span style="color: ${data.isImportant ? '#f56565' : '#68d391'}; font-weight: bold;">${data.isImportant ? 'Yes' : 'No'}</span></p>
-    <p><strong>Timestamp:</strong> ${data.timestamp === "N/A" ? "N/A" : new Date(data.timestamp).toLocaleString()}</p>
+    
+    <p><strong>Timestamp:</strong> ${formatAIDate(data.timestamp)}</p>
   `;
+  
   document.getElementById("edi-modal-title").innerText = "Analysis Result";
   document.getElementById("edi-modal-body").innerHTML = formattedHTML;
 }
 
+// Main function jo button dabane pe chalta hai
 function startAnalysis() {
   const emailBody = document.querySelector(".a3s.aiL, .gs");
   if (!emailBody) {
@@ -61,15 +96,11 @@ function startAnalysis() {
   );
 }
 
+// Function jo Gmail me button lagata hai
 function addAnalyzeButton() {
   const buttonBar = document.querySelector(".G-tF");
   if (buttonBar && !document.getElementById("edi_analyze_button")) {
-    
-    // --- YEH FIX HAI (Step 2) ---
-    // Pehle "div" tha, ab "button" hai
     const analyzeButton = document.createElement("button"); 
-    // ------------------------
-
     analyzeButton.className = "edi-analyze-button";
     analyzeButton.id = "edi_analyze_button";
     analyzeButton.innerText = "Analyze";
@@ -78,9 +109,7 @@ function addAnalyzeButton() {
   }
 }
 
-// --- YEH FIX HAI (Step 1) ---
-// Pehle 1000ms tha, ab 300ms hai (bohot fast)
+// Fast check karne ka
 setInterval(addAnalyzeButton, 300);
-// ------------------------
 
 console.log("EDI Analyzer Content Script Loaded.");

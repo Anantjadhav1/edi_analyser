@@ -1,19 +1,22 @@
-// backend/index.js (FINAL POORA CODE)
+// backend/index.js 
+//receives the request from background.js
+//reads the email text 
+//sends to the api and returns the result to both background.js and index.js in JSON
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-// --- AI Setup ---
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const generationConfig = {
-  temperature: 0.1, // Ekdum consistent result ke liye
+  temperature: 0.1, 
   topP: 1,
   topK: 1,
   maxOutputTokens: 2048,
 };
-// -----------------
+
 
 const app = express();
 const PORT = 3001;
@@ -25,15 +28,14 @@ app.use(express.json());
 // Main analysis function
 async function analyzeText(fileContent) {
   
-  // --- YEH HAI FIX (PROBLEM 2) ---
-  // AI ko sahi LOCAL date batane ka
+  //current date
   const now = new Date();
   const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0'); // month 0 se start hota hai isliye +1
+  const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
-  const todayDate = `${year}-${month}-${day}`; // Format: YYYY-MM-DD (Local)
-  // -----------------------------
+  const todayDate = `${year}-${month}-${day}`; // Format: YYYY-MM-DD (Local) 
 
+  
   const prompt = `
     The user is in Pune, India (IST, UTC+5:30). Today's local date is: ${todayDate}.
 
@@ -42,18 +44,21 @@ async function analyzeText(fileContent) {
 
     1. "messageType": Classify as ORDER, INVOICE, CANCEL, SHIPMENT, REJECTION, INVITATION, or UNKNOWN.
     
-    2. "isImportant": A boolean (true or false). Mark as true if:
-       - The message is a CANCEL or REJECTION.
-       - The message contains URGENT language.
-       - The event date you find is the *same* as today's local date (${todayDate}).
-       Otherwise, mark as false.
-
-    3. "summary": A one-sentence professional summary.
-
-    4. "timestamp": This is CRITICAL. Find the *event* or *document* date mentioned in the email body (like the "4:00 PM" event time). 
+    2. "timestamp": This is CRITICAL. Find the *event* or *document* date mentioned in the email body (like "4:00 PM" event time or "Thursday, 13 Nov 2025" deadline).
        This event is in Pune (IST, UTC+5:30). You MUST return the date and time in the correct UTC ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ).
-       For example, "November 4, 2025, at 4:00 PM" in Pune (IST) is "2025-11-04T10:30:00Z" in UTC.
+       For example, "Thursday, 13 Nov 2025, 6:30 PM" in Pune (IST) is "2025-11-13T13:00:00Z" in UTC.
        If no specific date is found in the content, return "N/A".
+
+    3. "isImportant": A boolean (true or false). Follow these rules IN ORDER:
+       - First, look at the "timestamp" you found.
+       - **Rule A (Expired):** If the "timestamp" is "N/A" or is *before* today's date (${todayDate}), it is EXPIRED. 'isImportant' MUST be 'false'.
+       - **Rule B (Today/Future):** If the "timestamp" is *on or after* ${todayDate}, THEN check for these conditions:
+         - The message is a CANCEL or REJECTION.
+         - The message contains URGENT language.
+         - **The event date is within the next 3 days from today (${todayDate}).** <--- YEH NAYA RULE HAI
+         If any of these are true, set 'isImportant' to 'true'. Otherwise, set it to 'false'.
+
+    4. "summary": A one-sentence professional summary.
 
     5. "keyFields": An object containing important values (e.g., "eventName", "eventLocation").
 
@@ -61,11 +66,11 @@ async function analyzeText(fileContent) {
     ---
     ${fileContent}
     ---
-  `; // <--- Yeh backtick zaroori hai
+  `; 
 
   try {
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.5-flash", // Tera wala model
+      model: "gemini-2.5-flash", 
       generationConfig: generationConfig,
     });
 
@@ -85,7 +90,7 @@ async function analyzeText(fileContent) {
   }
 }
 
-// Apun ka API endpoint
+
 app.post('/api/analyze', upload.single('ediFile'), async (req, res) => {
   let fileContent = "";
 
